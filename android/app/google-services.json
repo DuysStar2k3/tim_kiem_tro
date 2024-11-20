@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "702744825648",
+    "project_id": "test-c8200",
+    "storage_bucket": "test-c8200.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:702744825648:android:f65b684a06376ae66642f5",
+        "android_client_info": {
+          "package_name": "com.example.tro_moi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAzyxDoyOD0nHqZzcE4DtndiqTGJzttsDA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
