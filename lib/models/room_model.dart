@@ -30,6 +30,12 @@ class RoomModel {
   final bool hasPrivateBathroom;
   final bool hasKitchen;
   final bool hasFreedom;
+  final int views;
+  final List<String> viewedBy;
+  final double rating;
+  final int ratingCount;
+  final List<String> ratedBy;
+  final List<String> favoriteBy;
 
   RoomModel({
     required this.id,
@@ -59,6 +65,12 @@ class RoomModel {
     this.hasPrivateBathroom = false,
     this.hasKitchen = false,
     this.hasFreedom = false,
+    this.views = 0,
+    this.viewedBy = const [],
+    this.rating = 0,
+    this.ratingCount = 0,
+    this.ratedBy = const [],
+    this.favoriteBy = const [],
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory RoomModel.fromMap(Map<String, dynamic> map, String id) {
@@ -93,6 +105,12 @@ class RoomModel {
         hasPrivateBathroom: map['hasPrivateBathroom'] ?? false,
         hasKitchen: map['hasKitchen'] ?? false,
         hasFreedom: map['hasFreedom'] ?? false,
+        views: map['views'] ?? 0,
+        viewedBy: List<String>.from(map['viewedBy'] ?? []),
+        rating: (map['rating'] ?? 0).toDouble(),
+        ratingCount: map['ratingCount'] ?? 0,
+        ratedBy: List<String>.from(map['ratedBy'] ?? []),
+        favoriteBy: List<String>.from(map['favoriteBy'] ?? []),
       );
     } catch (e) {
       print('Lỗi khi chuyển đổi dữ liệu phòng: $e');
@@ -128,6 +146,12 @@ class RoomModel {
       'hasPrivateBathroom': hasPrivateBathroom,
       'hasKitchen': hasKitchen,
       'hasFreedom': hasFreedom,
+      'views': views,
+      'viewedBy': viewedBy,
+      'rating': rating,
+      'ratingCount': ratingCount,
+      'ratedBy': ratedBy,
+      'favoriteBy': favoriteBy,
     };
   }
 
@@ -159,6 +183,12 @@ class RoomModel {
     bool? hasPrivateBathroom,
     bool? hasKitchen,
     bool? hasFreedom,
+    int? views,
+    List<String>? viewedBy,
+    double? rating,
+    int? ratingCount,
+    List<String>? ratedBy,
+    List<String>? favoriteBy,
   }) {
     return RoomModel(
       id: id ?? this.id,
@@ -188,6 +218,12 @@ class RoomModel {
       hasPrivateBathroom: hasPrivateBathroom ?? this.hasPrivateBathroom,
       hasKitchen: hasKitchen ?? this.hasKitchen,
       hasFreedom: hasFreedom ?? this.hasFreedom,
+      views: views ?? this.views,
+      viewedBy: viewedBy ?? this.viewedBy,
+      rating: rating ?? this.rating,
+      ratingCount: ratingCount ?? this.ratingCount,
+      ratedBy: ratedBy ?? this.ratedBy,
+      favoriteBy: favoriteBy ?? this.favoriteBy,
     );
   }
 } 

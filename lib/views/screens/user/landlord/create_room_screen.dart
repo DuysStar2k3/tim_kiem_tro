@@ -12,7 +12,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
 
-import 'location_picker_screen.dart';
+import '../room/location_picker_screen.dart';
 
 class CreateRoomScreen extends StatefulWidget {
   const CreateRoomScreen({super.key});

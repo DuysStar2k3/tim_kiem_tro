@@ -1,24 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/room_controller.dart';
-import 'views/screens/admin/admin_main_screen.dart';
 import 'views/screens/main_screen.dart';
-import 'theme/app_theme.dart';
+import 'theme/app_colors.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
 
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-  } catch (e) {
-    debugPrint('Firebase đã được khởi tạo trước đó: $e');
-    Firebase.app();
-  }
   runApp(
     MultiProvider(
       providers: [
@@ -37,29 +28,32 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Ứng dụng tìm phòng trọ',
-      theme: AppTheme.lightTheme,
-      home: const AuthWrapper(),
-    );
-  }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<AuthController>(
-      builder: (context, auth, _) {
-        // Kiểm tra trạng thái đăng nhập và vai trò
-        if (auth.isLoggedIn) {
-          if (auth.isAdmin) {
-            return const AdminMainScreen();
-          }
-        }
-        // Nếu chưa đăng nhập hoặc không phải admin thì hiển thị MainScreen
-        return const MainScreen();
-      },
+      title: 'Tìm phòng trọ',
+      theme: ThemeData(
+        primarySwatch: AppColors.createMaterialColor(AppColors.primary),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+        ),
+        navigationBarTheme: NavigationBarThemeData(
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return const TextStyle(
+                color: AppColors.primary,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              );
+            }
+            return TextStyle(
+              color: Colors.grey[600],
+              fontSize: 12,
+            );
+          }),
+        ),
+      ),
+      home: const MainScreen(),
     );
   }
 }

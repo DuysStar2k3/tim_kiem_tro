@@ -7,6 +7,7 @@ import '../../../../controllers/room_controller.dart';
 import '../../../../models/room_model.dart';
 import '../../../../theme/app_colors.dart';
 import '../room/room_detail_screen.dart';
+import '../../../../controllers/auth_controller.dart';
 
 // Đổi tên enum để tránh xung đột
 enum CustomMapType {
@@ -238,9 +239,13 @@ class _MapScreenState extends State<MapScreen> {
       case PriceRange.under3M:
         return rooms.where((room) => room.price < 3000000).toList();
       case PriceRange.from3Mto5M:
-        return rooms.where((room) => room.price >= 3000000 && room.price < 5000000).toList();
+        return rooms
+            .where((room) => room.price >= 3000000 && room.price < 5000000)
+            .toList();
       case PriceRange.from5Mto7M:
-        return rooms.where((room) => room.price >= 5000000 && room.price < 7000000).toList();
+        return rooms
+            .where((room) => room.price >= 5000000 && room.price < 7000000)
+            .toList();
       case PriceRange.over7M:
         return rooms.where((room) => room.price >= 7000000).toList();
     }
@@ -266,10 +271,9 @@ class _MapScreenState extends State<MapScreen> {
                   .toList();
 
               // Áp dụng cả bộ lọc bán kính và giá
-              List<RoomModel> displayedRooms = _showRadius 
-                  ? _filterRoomsByRadius(approvedRooms)
-                  : [];
-              
+              List<RoomModel> displayedRooms =
+                  _showRadius ? _filterRoomsByRadius(approvedRooms) : [];
+
               // Áp dụng bộ lọc giá
               displayedRooms = _filterRoomsByPrice(displayedRooms);
 
@@ -285,6 +289,7 @@ class _MapScreenState extends State<MapScreen> {
                 onMapCreated: (controller) {
                   setState(() {
                     _mapController = controller;
+                    // ignore: deprecated_member_use
                     _mapController?.setMapStyle(_getMapStyle(_currentMapType));
                     _mapCreated = true;
                     _isLoading = false;
@@ -358,7 +363,9 @@ class _MapScreenState extends State<MapScreen> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
-                children: PriceRange.values.map((range) => _buildFilterChip(range)).toList(),
+                children: PriceRange.values
+                    .map((range) => _buildFilterChip(range))
+                    .toList(),
               ),
             ),
           ),
@@ -444,7 +451,7 @@ class _MapScreenState extends State<MapScreen> {
                 const SizedBox(height: 10),
                 _buildActionButton(
                   icon: Icons.layers,
-                  onPressed: _onMapTypeButtonPressed,
+                  onPressed: _showMapTypeOptions,
                   isActive: _currentMapType != CustomMapType.normal,
                   label: _getMapTypeLabel(_currentMapType),
                 ),
@@ -467,10 +474,9 @@ class _MapScreenState extends State<MapScreen> {
                       .toList();
 
                   // Áp dụng cả bộ lọc bán kính và giá
-                  List<RoomModel> displayedRooms = _showRadius 
-                      ? _filterRoomsByRadius(approvedRooms)
-                      : [];
-                  
+                  List<RoomModel> displayedRooms =
+                      _showRadius ? _filterRoomsByRadius(approvedRooms) : [];
+
                   // Áp dụng bộ lọc giá
                   displayedRooms = _filterRoomsByPrice(displayedRooms);
 
@@ -527,7 +533,8 @@ class _MapScreenState extends State<MapScreen> {
                                 const SizedBox(height: 4),
                                 // Số lượng phòng và nút sắp xếp
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
                                       'Tìm thấy ${displayedRooms.length} phòng',
@@ -577,7 +584,7 @@ class _MapScreenState extends State<MapScreen> {
                                           ),
                                           const SizedBox(height: 8),
                                           Text(
-                                            'Thử tăng bán kính tìm kiếm hoặc di chuyển đến khu vực khác',
+                                            'Thử tăng bán kính tm kiếm hoặc di chuyển đến khu vực khác',
                                             style: TextStyle(
                                               color: Colors.grey[500],
                                               fontSize: 14,
@@ -675,8 +682,11 @@ class _MapScreenState extends State<MapScreen> {
         label: Text(
           label,
           style: TextStyle(
-            color: _selectedPriceRange == range ? Colors.white : Colors.grey[800],
-            fontWeight: _selectedPriceRange == range ? FontWeight.bold : FontWeight.normal,
+            color:
+                _selectedPriceRange == range ? Colors.white : Colors.grey[800],
+            fontWeight: _selectedPriceRange == range
+                ? FontWeight.bold
+                : FontWeight.normal,
           ),
         ),
         selected: _selectedPriceRange == range,
@@ -808,26 +818,16 @@ class _MapScreenState extends State<MapScreen> {
               BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
           infoWindow: InfoWindow(
             title: room.title,
-            snippet: '${room.price.toStringAsFixed(0)} VNĐ/tháng',
-            onTap: () {
-              _showRoomDetails(room);
-            },
+            onTap: () => _showRoomDetails(room),
           ),
+          // onTap: () => _showRoomDetails(room),
         ),
       );
     }
     return markers;
   }
 
-  // Tạm thời tạo vị trí ngẫu nhiên cho demo
-  // LatLng _getRandomLocation() {
-  //   return LatLng(
-  //     _defaultLocation.latitude + (DateTime.now().millisecond / 10000),
-  //     _defaultLocation.longitude + (DateTime.now().microsecond / 10000),
-  //   );
-  // }
-
-  // Cải tiến giao diện item phòng
+  // Cập nhật phương thức _buildRoomListItem
   Widget _buildRoomListItem(RoomModel room) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -907,7 +907,16 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  // Giữ nguyên logic tăng lượt xem trong _showRoomDetails
   void _showRoomDetails(RoomModel room) {
+    // Kiểm tra người dùng đã đăng nhập chưa
+    final currentUser = context.read<AuthController>().currentUser;
+    if (currentUser != null) {
+      // Tăng lượt xem nếu đã đăng nhập
+      context.read<RoomController>().incrementViews(room.id, currentUser.id);
+    }
+
+    // Chuyển đến trang chi tiết
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -1015,6 +1024,7 @@ class _MapScreenState extends State<MapScreen> {
                 onTap: () {
                   setState(() {
                     _currentMapType = type;
+                    // ignore: deprecated_member_use
                     _mapController?.setMapStyle(_getMapStyle(type));
                   });
                   Navigator.pop(context);

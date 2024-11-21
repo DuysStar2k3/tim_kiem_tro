@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 import '../views/screens/admin/admin_main_screen.dart';
 import '../views/screens/user/landlord/landlord_main_screen.dart';
@@ -9,6 +11,7 @@ import '../views/screens/main_screen.dart';
 class AuthController extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   UserModel? _currentUser;
   bool _isLoading = false;
@@ -247,6 +250,41 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       print('Error getting user: $e');
       return null;
+    }
+  }
+
+  Future<void> updateUserProfile({
+    required String userId,
+    required String fullName,
+    required String phone,
+    File? avatarFile,
+  }) async {
+    try {
+      String? avatarUrl;
+      if (avatarFile != null) {
+        // Upload ảnh mới
+        final ref = _storage.ref().child('avatars/$userId');
+        await ref.putFile(avatarFile);
+        avatarUrl = await ref.getDownloadURL();
+      }
+
+      // Cập nhật thông tin user
+      await _firestore.collection('users').doc(userId).update({
+        'fullName': fullName,
+        'phone': phone,
+        if (avatarUrl != null) 'avatar': avatarUrl,
+      });
+
+      // Cập nhật state local
+      _currentUser = _currentUser?.copyWith(
+        fullName: fullName,
+        phone: phone,
+        avatar: avatarUrl ?? _currentUser?.avatar,
+      );
+      notifyListeners();
+    } catch (e) {
+      print('Error updating profile: $e');
+      rethrow;
     }
   }
 }

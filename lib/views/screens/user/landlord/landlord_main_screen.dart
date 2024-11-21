@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../theme/app_colors.dart';
 import '../profile/profile_screen.dart';
-import '../room/room_management_screen.dart';
+import 'room_management_screen.dart';
 
 class LandlordMainScreen extends StatefulWidget {
   const LandlordMainScreen({super.key});
