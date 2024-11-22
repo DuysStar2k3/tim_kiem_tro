@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'controllers/auth_controller.dart';
 import 'controllers/room_controller.dart';
-import 'views/screens/main_screen.dart';
+import 'views/screens/user_main_screen.dart';
 import 'theme/app_colors.dart';
 
 void main() async {

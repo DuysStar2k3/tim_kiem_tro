@@ -33,32 +33,38 @@ class MapScreen extends StatefulWidget {
   State<MapScreen> createState() => _MapScreenState();
 }
 
-class _MapScreenState extends State<MapScreen> {
-  GoogleMapController? _mapController;
-  Position? _currentPosition;
-  bool _isLoading = true;
-  // ignore: unused_field
-  bool _locationError = false;
-  bool _mapCreated = false;
-  double _currentRadius = 1000; // Bán kính mặc định 1km
-  Circle? _radiusCircle;
-  bool _showRadius = false;
-
-  // Vị trí mặc định (Hà Nội)
+class _MapScreenState extends State<MapScreen>
+    with SingleTickerProviderStateMixin {
+  // Constants
+  static const double _initialSheetSize = 0.3;
+  static const double _expandedSheetSize = 0.7;
+  static const double _defaultRadius = 1000.0;
   static const LatLng _defaultLocation = LatLng(21.0285, 105.8542);
 
-  // Thêm biến để lưu trữ BitmapDescriptor ở đầu class _MapScreenState
+  // Controllers
+  late final DraggableScrollableController _sheetController;
+  GoogleMapController? _mapController;
+
+  // State variables
+  Position? _currentPosition;
   BitmapDescriptor? _roomMarkerIcon;
+  Circle? _radiusCircle;
 
-  // Thêm biến để lưu kiểu bản đồ hiện tại
+  // Flags
+  bool _isLoading = true;
+  bool _mapCreated = false;
+  bool _showRadius = false;
+  bool _isExpanded = false;
+
+  // Map settings
   CustomMapType _currentMapType = CustomMapType.normal;
-
-  // Thêm biến để lưu bộ lọc hiện tại
   PriceRange _selectedPriceRange = PriceRange.all;
+  double _currentRadius = _defaultRadius;
 
   @override
   void initState() {
     super.initState();
+    _sheetController = DraggableScrollableController();
     _initializeMap();
     _createMarkerIcon();
   }
@@ -73,7 +79,6 @@ class _MapScreenState extends State<MapScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _locationError = true;
           _isLoading = false;
         });
       }
@@ -177,7 +182,6 @@ class _MapScreenState extends State<MapScreen> {
       setState(() {
         _currentPosition = position;
         _isLoading = false;
-        _locationError = false;
       });
 
       _mapController?.animateCamera(
@@ -194,25 +198,23 @@ class _MapScreenState extends State<MapScreen> {
       debugPrint('Error getting location: $e');
       setState(() {
         _isLoading = false;
-        _locationError = true;
       });
     }
   }
 
   void _updateRadiusCircle() {
-    if (_currentPosition != null) {
-      setState(() {
-        _radiusCircle = Circle(
-          circleId: const CircleId('searchRadius'),
-          center:
-              LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          radius: _currentRadius,
-          fillColor: AppColors.primary.withOpacity(0.1),
-          strokeColor: AppColors.primary.withOpacity(0.5),
-          strokeWidth: 2,
-        );
-      });
-    }
+    if (_currentPosition == null) return;
+
+    setState(() {
+      _radiusCircle = Circle(
+        circleId: const CircleId('searchRadius'),
+        center: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        radius: _currentRadius,
+        fillColor: AppColors.primary.withOpacity(0.1),
+        strokeColor: AppColors.primary.withOpacity(0.5),
+        strokeWidth: 2,
+      );
+    });
   }
 
   List<RoomModel> _filterRoomsByRadius(List<RoomModel> rooms) {
@@ -466,6 +468,7 @@ class _MapScreenState extends State<MapScreen> {
             maxChildSize: 0.7,
             snap: true,
             snapSizes: const [0.3, 0.5, 0.7],
+            controller: _sheetController,
             builder: (context, scrollController) {
               return Consumer<RoomController>(
                 builder: (context, roomController, child) {
@@ -651,6 +654,24 @@ class _MapScreenState extends State<MapScreen> {
               );
             },
           ),
+
+          // Thêm nút điều khiển bên phải
+          Positioned(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 250,
+            right: 16,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildActionButton(
+                  icon: _isExpanded
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_up,
+                  onPressed: _toggleBottomSheet,
+                  label: _isExpanded ? 'Thu gọn' : 'Mở rộng',
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -741,8 +762,8 @@ class _MapScreenState extends State<MapScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        if (label != null)
+        if (label != null) ...[
+          const SizedBox(height: 4),
           Text(
             label,
             style: const TextStyle(
@@ -750,6 +771,7 @@ class _MapScreenState extends State<MapScreen> {
               fontWeight: FontWeight.bold,
             ),
           ),
+        ],
       ],
     );
   }
@@ -804,27 +826,21 @@ class _MapScreenState extends State<MapScreen> {
 
   // Cập nhật phương thức _buildMarkers
   Set<Marker> _buildMarkers(List<RoomModel> rooms) {
-    if (!_showRadius) {
-      return {};
-    }
+    if (!_showRadius) return {};
 
-    final markers = <Marker>{};
-    for (final room in rooms) {
-      markers.add(
-        Marker(
-          markerId: MarkerId(room.id),
-          position: LatLng(room.latitude, room.longitude),
-          icon: _roomMarkerIcon ??
-              BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
-          infoWindow: InfoWindow(
-            title: room.title,
-            onTap: () => _showRoomDetails(room),
-          ),
-          // onTap: () => _showRoomDetails(room),
-        ),
-      );
-    }
-    return markers;
+    return rooms
+        .map((room) => Marker(
+              markerId: MarkerId(room.id),
+              position: LatLng(room.latitude, room.longitude),
+              icon: _roomMarkerIcon ??
+                  BitmapDescriptor.defaultMarkerWithHue(
+                      BitmapDescriptor.hueRed),
+              infoWindow: InfoWindow(
+                title: room.title,
+                onTap: () => _showRoomDetails(room),
+              ),
+            ))
+        .toSet();
   }
 
   // Cập nhật phương thức _buildRoomListItem
@@ -928,6 +944,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   void dispose() {
     _mapController?.dispose();
+    _sheetController.dispose();
     super.dispose();
   }
 
@@ -1051,5 +1068,20 @@ class _MapScreenState extends State<MapScreen> {
       case PriceRange.over7M:
         return ' giá trên 7 triệu';
     }
+  }
+
+  // Sửa phương thức điều khiển bottom sheet
+  void _toggleBottomSheet() {
+    if (!_sheetController.isAttached) return;
+
+    final targetSize = _isExpanded ? _initialSheetSize : _expandedSheetSize;
+
+    setState(() => _isExpanded = !_isExpanded);
+
+    _sheetController.animateTo(
+      targetSize,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
   }
 }

@@ -6,7 +6,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 import '../views/screens/admin/admin_main_screen.dart';
 import '../views/screens/user/landlord/landlord_main_screen.dart';
-import '../views/screens/main_screen.dart';
+import '../views/screens/user_main_screen.dart';
 
 class AuthController extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
