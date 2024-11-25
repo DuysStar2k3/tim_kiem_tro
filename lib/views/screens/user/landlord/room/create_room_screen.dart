@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../../../controllers/auth_controller.dart';
-import '../../../../controllers/room_controller.dart';
-import '../../../../models/room_model.dart';
-import '../../../../theme/app_colors.dart';
+import '../../../../../controllers/auth_controller.dart';
+import '../../../../../controllers/room_controller.dart';
+import '../../../../../models/room_model.dart';
+import '../../../../../theme/app_colors.dart';
 import 'package:provider/provider.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geocoding/geocoding.dart';
@@ -12,7 +12,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 // ignore: depend_on_referenced_packages
 import 'package:path/path.dart' as path;
 
-import '../room/location_picker_screen.dart';
+import 'location_picker_screen.dart';
 
 class CreateRoomScreen extends StatefulWidget {
   const CreateRoomScreen({super.key});

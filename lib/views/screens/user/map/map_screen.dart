@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart' as google_maps;
 import 'package:geolocator/geolocator.dart';
@@ -6,7 +7,8 @@ import 'package:provider/provider.dart';
 import '../../../../controllers/room_controller.dart';
 import '../../../../models/room_model.dart';
 import '../../../../theme/app_colors.dart';
-import '../room/room_detail_screen.dart';
+import '../../../../utils/currency_format.dart';
+import '../../../widgets/room_detail_screen.dart';
 import '../../../../controllers/auth_controller.dart';
 
 // Đổi tên enum để tránh xung đột
@@ -36,8 +38,9 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen>
     with SingleTickerProviderStateMixin {
   // Constants
-  static const double _initialSheetSize = 0.3;
-  static const double _expandedSheetSize = 0.7;
+  static const double _collapsedSheetSize = 0.02; // 2% khi ẩn
+  static const double _initialSheetSize = 0.25; // 25% khi mới vào
+  static const double _expandedSheetSize = 0.8; // 80% khi mở rộng
   static const double _defaultRadius = 1000.0;
   static const LatLng _defaultLocation = LatLng(21.0285, 105.8542);
 
@@ -61,12 +64,22 @@ class _MapScreenState extends State<MapScreen>
   PriceRange _selectedPriceRange = PriceRange.all;
   double _currentRadius = _defaultRadius;
 
+  // Thêm các biến mới cho tìm kiếm
+  final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
+  bool _isSearching = false;
+  List<RoomModel> _searchResults = [];
+  Timer? _debounceTimer;
+
   @override
   void initState() {
     super.initState();
     _sheetController = DraggableScrollableController();
     _initializeMap();
     _createMarkerIcon();
+
+    // Thêm listener cho search
+    _searchController.addListener(_onSearchChanged);
   }
 
   Future<void> _initializeMap() async {
@@ -119,7 +132,7 @@ class _MapScreenState extends State<MapScreen>
             },
           );
         }
-        throw Exception('Location services are disabled.');
+        throw Exception('Dịch vụ vị trí đã bị tắt.');
       }
 
       // Kiểm tra quyền truy cập vị trí
@@ -134,7 +147,7 @@ class _MapScreenState extends State<MapScreen>
               ),
             );
           }
-          throw Exception('Location permissions are denied');
+          throw Exception('Quyền truy cập vị trí bị từ chối');
         }
       }
 
@@ -168,10 +181,10 @@ class _MapScreenState extends State<MapScreen>
           );
         }
         throw Exception(
-            'Location permissions are permanently denied, we cannot request permissions.');
+            'Quyền truy cập vị trí bị từ chối vĩnh viễn, không thể yêu cầu quyền.');
       }
     } catch (e) {
-      debugPrint('Error checking location permission: $e');
+      debugPrint('Lỗi kiểm tra quyền truy cập vị trí: $e');
       rethrow;
     }
   }
@@ -187,7 +200,7 @@ class _MapScreenState extends State<MapScreen>
       _mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(
           LatLng(position.latitude, position.longitude),
-          15,
+          14,
         ),
       );
 
@@ -195,7 +208,7 @@ class _MapScreenState extends State<MapScreen>
         _updateRadiusCircle();
       }
     } catch (e) {
-      debugPrint('Error getting location: $e');
+      debugPrint('Lỗi lấy vị trí: $e');
       setState(() {
         _isLoading = false;
       });
@@ -309,68 +322,45 @@ class _MapScreenState extends State<MapScreen>
             },
           ),
 
-          // Search bar với thiết kế mới
+          // Thanh tìm kiếm
           Positioned(
             top: MediaQuery.of(context).padding.top + 10,
             left: 16,
             right: 16,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: () {
-                    // TODO: Implement search
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.search, color: AppColors.primary),
-                        const SizedBox(width: 12),
-                        Text(
-                          'Tìm kiếm khu vực...',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+            child: _buildSearchBar(),
+          ),
+
+          // Filter chips - Thêm điều kiện hiển thị
+          if (!_isSearching)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 70,
+              left: 16,
+              right: 16,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: PriceRange.values
+                      .map((range) => _buildFilterChip(range))
+                      .toList(),
                 ),
               ),
             ),
-          ),
 
-          // Filter chips
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 70,
-            left: 16,
-            right: 16,
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: PriceRange.values
-                    .map((range) => _buildFilterChip(range))
-                    .toList(),
+          // Kết quả tìm kiếm - Điều chỉnh vị trí và thêm Container bọc ngoài
+          if (_isSearching && _searchResults.isNotEmpty)
+            Positioned(
+              top: MediaQuery.of(context).padding.top +
+                  70, // Đặt ngay dưới thanh tìm kiếm
+              left: 16,
+              right: 16,
+              child: Container(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height *
+                      0.5, // Giới hn chiều cao tối đa
+                ),
+                child: _buildSearchResults(),
               ),
             ),
-          ),
 
           // Radius control với thiết kế mới
           if (_showRadius)
@@ -393,16 +383,47 @@ class _MapScreenState extends State<MapScreen>
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '${(_currentRadius / 1000).toStringAsFixed(1)} km',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
+                    // Nút tăng bán kính
+                    IconButton(
+                      onPressed: () {
+                        if (_currentRadius < 5000) {
+                          setState(() {
+                            _currentRadius = _currentRadius + 500;
+                            _updateRadiusCircle();
+                            // Cập nhật độ zoom của bản đồ
+                            if (_currentPosition != null &&
+                                _mapController != null) {
+                              _mapController!.animateCamera(
+                                CameraUpdate.newLatLngZoom(
+                                  LatLng(_currentPosition!.latitude,
+                                      _currentPosition!.longitude),
+                                  _getZoomLevel(_currentRadius),
+                                ),
+                              );
+                            }
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add_circle_outline),
+                      color: _currentRadius < 5000
+                          ? AppColors.primary
+                          : Colors.grey,
+                    ),
+
+                    // Hiển thị bán kính
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '${(_currentRadius / 1000).toStringAsFixed(1)} km',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    // Slider vẫn giữ nguyên
                     SizedBox(
-                      height: 150,
+                      height: 130,
                       child: RotatedBox(
                         quarterTurns: 3,
                         child: Slider(
@@ -415,10 +436,46 @@ class _MapScreenState extends State<MapScreen>
                             setState(() {
                               _currentRadius = value;
                               _updateRadiusCircle();
+                              // Cập nhật độ zoom của bản đồ
+                              if (_currentPosition != null &&
+                                  _mapController != null) {
+                                _mapController!.animateCamera(
+                                  CameraUpdate.newLatLngZoom(
+                                    LatLng(_currentPosition!.latitude,
+                                        _currentPosition!.longitude),
+                                    _getZoomLevel(_currentRadius),
+                                  ),
+                                );
+                              }
                             });
                           },
                         ),
                       ),
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        if (_currentRadius > 500) {
+                          setState(() {
+                            _currentRadius = _currentRadius - 500;
+                            _updateRadiusCircle();
+                            // Cập nhật độ zoom của bản đồ
+                            if (_currentPosition != null &&
+                                _mapController != null) {
+                              _mapController!.animateCamera(
+                                CameraUpdate.newLatLngZoom(
+                                  LatLng(_currentPosition!.latitude,
+                                      _currentPosition!.longitude),
+                                  _getZoomLevel(_currentRadius),
+                                ),
+                              );
+                            }
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.remove_circle_outline),
+                      color: _currentRadius > 500
+                          ? AppColors.primary
+                          : Colors.grey,
                     ),
                   ],
                 ),
@@ -436,14 +493,7 @@ class _MapScreenState extends State<MapScreen>
                 _buildActionButton(
                   icon: Icons.radar,
                   isActive: _showRadius,
-                  onPressed: () {
-                    setState(() {
-                      _showRadius = !_showRadius;
-                      if (_showRadius) {
-                        _updateRadiusCircle();
-                      }
-                    });
-                  },
+                  onPressed: _toggleScanMode,
                 ),
                 const SizedBox(height: 16),
                 _buildActionButton(
@@ -453,7 +503,7 @@ class _MapScreenState extends State<MapScreen>
                 const SizedBox(height: 10),
                 _buildActionButton(
                   icon: Icons.layers,
-                  onPressed: _showMapTypeOptions,
+                  onPressed: _onMapTypeButtonPressed,
                   isActive: _currentMapType != CustomMapType.normal,
                   label: _getMapTypeLabel(_currentMapType),
                 ),
@@ -463,11 +513,15 @@ class _MapScreenState extends State<MapScreen>
 
           // Bottom sheet hiển thị danh sách phòng
           DraggableScrollableSheet(
-            initialChildSize: 0.3,
-            minChildSize: 0.2,
-            maxChildSize: 0.7,
+            initialChildSize: _initialSheetSize,
+            minChildSize: _collapsedSheetSize,
+            maxChildSize: _expandedSheetSize,
             snap: true,
-            snapSizes: const [0.3, 0.5, 0.7],
+            snapSizes: const [
+              _collapsedSheetSize,
+              _initialSheetSize,
+              _expandedSheetSize
+            ],
             controller: _sheetController,
             builder: (context, scrollController) {
               return Consumer<RoomController>(
@@ -476,11 +530,8 @@ class _MapScreenState extends State<MapScreen>
                       .where((room) => room.isApproved)
                       .toList();
 
-                  // Áp dụng cả bộ lọc bán kính và giá
                   List<RoomModel> displayedRooms =
                       _showRadius ? _filterRoomsByRadius(approvedRooms) : [];
-
-                  // Áp dụng bộ lọc giá
                   displayedRooms = _filterRoomsByPrice(displayedRooms);
 
                   return Container(
@@ -497,19 +548,20 @@ class _MapScreenState extends State<MapScreen>
                       ],
                     ),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        // Thanh kéo được làm to hơn để dễ thao tác
-                        Container(
-                          width: 100,
-                          height: 30,
-                          alignment: Alignment.center,
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: Container(
-                            width: 50,
-                            height: 5,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(2.5),
+                        // Thanh kéo
+                        GestureDetector(
+                          onTap: _toggleBottomSheet,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 2, bottom: 8),
+                            child: Container(
+                              width: 50,
+                              height: 5,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2.5),
+                              ),
                             ),
                           ),
                         ),
@@ -546,17 +598,6 @@ class _MapScreenState extends State<MapScreen>
                                         fontSize: 14,
                                       ),
                                     ),
-                                    if (displayedRooms.isNotEmpty)
-                                      TextButton.icon(
-                                        onPressed: () {
-                                          // TODO: Implement sort function
-                                        },
-                                        icon: const Icon(Icons.sort, size: 20),
-                                        label: const Text(
-                                          'Sắp xếp',
-                                          style: TextStyle(fontSize: 14),
-                                        ),
-                                      ),
                                   ],
                                 ),
                               ],
@@ -566,36 +607,34 @@ class _MapScreenState extends State<MapScreen>
                           // Danh sách phòng
                           Expanded(
                             child: displayedRooms.isEmpty
-                                ? SingleChildScrollView(
-                                    child: Center(
-                                      child: Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.search_off,
-                                            size: 64,
-                                            color: Colors.grey[400],
+                                ? Center(
+                                    child: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.search_off,
+                                          size: 64,
+                                          color: Colors.grey[400],
+                                        ),
+                                        const SizedBox(height: 16),
+                                        Text(
+                                          'Không tìm thấy phòng trong khu vực này',
+                                          style: TextStyle(
+                                            color: Colors.grey[600],
+                                            fontSize: 16,
                                           ),
-                                          const SizedBox(height: 16),
-                                          Text(
-                                            'Không tìm thấy phòng trong khu vực này',
-                                            style: TextStyle(
-                                              color: Colors.grey[600],
-                                              fontSize: 16,
-                                            ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          'Thử tăng bán kính tìm kiếm hoặc di chuyển đến khu vực khác',
+                                          style: TextStyle(
+                                            color: Colors.grey[500],
+                                            fontSize: 14,
                                           ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Thử tăng bán kính tm kiếm hoặc di chuyển đến khu vực khác',
-                                            style: TextStyle(
-                                              color: Colors.grey[500],
-                                              fontSize: 14,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
                                     ),
                                   )
                                 : ListView.builder(
@@ -612,37 +651,51 @@ class _MapScreenState extends State<MapScreen>
                                   ),
                           ),
                         ] else ...[
-                          // Hiển thị hướng dẫn khi chưa bật quét
+                          // Nội dung hướng dẫn khi chưa quét
                           Expanded(
                             child: SingleChildScrollView(
-                              child: Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.radar,
-                                      size: 64,
-                                      color: Colors.grey[400],
+                              controller: scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.radar,
+                                    size: 70,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 20),
+                                  const Text(
+                                    'Bật tính năng quét để tìm phòng',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                    const SizedBox(height: 16),
-                                    const Text(
-                                      'Bật tính năng quét để tìm phòng',
-                                      style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Nhấn nút "Quét khu vực" để xem các phòng\ntrong bán kính xung quanh bạn',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 20),
+                                  ElevatedButton.icon(
+                                    onPressed: _toggleScanMode,
+                                    icon: const Icon(Icons.radar),
+                                    label: const Text('Bắt đầu quét'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 24,
+                                        vertical: 12,
                                       ),
                                     ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Nhấn nút "Quét khu vực" để xem các phòng\ntrong bán kính xung quanh bạn',
-                                      style: TextStyle(
-                                        color: Colors.grey[600],
-                                        fontSize: 14,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -655,7 +708,7 @@ class _MapScreenState extends State<MapScreen>
             },
           ),
 
-          // Thêm nút điều khiển bên phải
+          // Sửa lại phần nút điều khiển bên phải
           Positioned(
             bottom: MediaQuery.of(context).viewInsets.bottom + 250,
             right: 16,
@@ -663,11 +716,21 @@ class _MapScreenState extends State<MapScreen>
               mainAxisSize: MainAxisSize.min,
               children: [
                 _buildActionButton(
-                  icon: _isExpanded
-                      ? Icons.keyboard_arrow_down
-                      : Icons.keyboard_arrow_up,
+                  icon: !_showRadius
+                      ? (_sheetController.isAttached &&
+                              _sheetController.size <= _collapsedSheetSize + 0.1
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_up)
+                      : (_isExpanded
+                          ? Icons.keyboard_arrow_down
+                          : Icons.keyboard_arrow_up),
                   onPressed: _toggleBottomSheet,
-                  label: _isExpanded ? 'Thu gọn' : 'Mở rộng',
+                  label: !_showRadius
+                      ? (_sheetController.isAttached &&
+                              _sheetController.size <= _collapsedSheetSize + 0.1
+                          ? 'Thu gọn'
+                          : 'Mở rộng')
+                      : (_isExpanded ? 'Thu gọn' : 'Mở rộng'),
                 ),
               ],
             ),
@@ -820,7 +883,7 @@ class _MapScreenState extends State<MapScreen>
   Future<void> _createMarkerIcon() async {
     _roomMarkerIcon = await BitmapDescriptor.asset(
       const ImageConfiguration(size: Size(30, 30)),
-      'assets/icons/hostel.png', // Đảm bảo thêm file này vào assets
+      'assets/icons/hostel.png', // Đảm bảo thm file này vào assets
     );
   }
 
@@ -906,7 +969,7 @@ class _MapScreenState extends State<MapScreen>
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '${room.price.toStringAsFixed(0)} VNĐ/tháng',
+                      '${CurrencyFormat.formatVNDCurrency(room.price)}/tháng',
                       style: const TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
@@ -945,6 +1008,9 @@ class _MapScreenState extends State<MapScreen>
   void dispose() {
     _mapController?.dispose();
     _sheetController.dispose();
+    _searchController.dispose();
+    _searchFocusNode.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -996,64 +1062,6 @@ class _MapScreenState extends State<MapScreen>
     }
   }
 
-  // Sửa phương thức lấy icon
-  IconData _getMapTypeIcon(CustomMapType type) {
-    switch (type) {
-      case CustomMapType.normal:
-        return Icons.map;
-      case CustomMapType.satellite:
-        return Icons.satellite;
-      case CustomMapType.terrain:
-        return Icons.terrain;
-      case CustomMapType.hybrid:
-        return Icons.layers;
-    }
-  }
-
-  // Sửa phương thức hiển thị tùy chọn
-  void _showMapTypeOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: CustomMapType.values.map((type) {
-              return ListTile(
-                leading: Icon(
-                  _getMapTypeIcon(type),
-                  color:
-                      _currentMapType == type ? AppColors.primary : Colors.grey,
-                ),
-                title: Text(
-                  _getMapTypeLabel(type),
-                  style: TextStyle(
-                    color: _currentMapType == type
-                        ? AppColors.primary
-                        : Colors.black,
-                    fontWeight: _currentMapType == type
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-                selected: _currentMapType == type,
-                onTap: () {
-                  setState(() {
-                    _currentMapType = type;
-                    // ignore: deprecated_member_use
-                    _mapController?.setMapStyle(_getMapStyle(type));
-                  });
-                  Navigator.pop(context);
-                },
-              );
-            }).toList(),
-          ),
-        );
-      },
-    );
-  }
-
   // Thêm phương thức để lấy text hiển thị khoảng giá
   String _getPriceRangeText() {
     switch (_selectedPriceRange) {
@@ -1074,14 +1082,384 @@ class _MapScreenState extends State<MapScreen>
   void _toggleBottomSheet() {
     if (!_sheetController.isAttached) return;
 
-    final targetSize = _isExpanded ? _initialSheetSize : _expandedSheetSize;
+    double currentSize = _sheetController.size;
+    double targetSize;
 
-    setState(() => _isExpanded = !_isExpanded);
+    // Chỉ cho phép thu gọn về 5% khi không bật quét
+    if (currentSize > _collapsedSheetSize + 0.1 && !_showRadius) {
+      targetSize = _collapsedSheetSize;
+    } else if (currentSize <= _collapsedSheetSize + 0.1) {
+      targetSize = _initialSheetSize;
+    } else if (currentSize <= _initialSheetSize + 0.1) {
+      targetSize = _expandedSheetSize;
+    } else {
+      targetSize = _initialSheetSize;
+    }
+
+    setState(() => _isExpanded = targetSize == _expandedSheetSize);
 
     _sheetController.animateTo(
       targetSize,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+  }
+
+  // Sửa lại phương thức xử lý nút quét
+  void _toggleScanMode() {
+    if (!_sheetController.isAttached) return;
+
+    bool wasOff = !_showRadius; // Lưu trạng thái trước khi thay đổi
+
+    if (wasOff) {
+      // Nếu đang chuyển từ tắt sang bật
+      // Đẩy bottom sheet lên trước
+      _sheetController
+          .animateTo(
+        _initialSheetSize,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      )
+          .then((_) {
+        // Sau khi đẩy lên xong mới cập nhật state để hiển thị nội dung
+        setState(() {
+          _showRadius = true;
+          _updateRadiusCircle();
+        });
+      });
+    } else {
+      // Nếu đang tắt quét thì cập nhật state ngay
+      setState(() {
+        _showRadius = false;
+      });
+    }
+  }
+
+  // Thêm phương thức xử lý tìm kiếm
+  void _onSearchChanged() {
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_searchController.text.isEmpty) {
+        setState(() {
+          _isSearching = false;
+          _searchResults = [];
+        });
+        return;
+      }
+
+      setState(() {
+        _isSearching = true;
+        final searchTerm = _searchController.text.toLowerCase();
+
+        // Tạo danh sách kết quả với điểm số tương đồng
+        final scoredResults =
+            context.read<RoomController>().rooms.where((room) {
+          if (!room.isApproved) return false;
+
+          // Tính điểm tương đồng cho title và address
+          double titleScore = _calculateSimilarity(room.title, searchTerm);
+          double addressScore = _calculateSimilarity(room.address, searchTerm);
+
+          // Kiểm tra từng từ trong searchTerm
+          final searchWords =
+              searchTerm.split(' ').where((word) => word.isNotEmpty).toList();
+          for (final word in searchWords) {
+            // Tăng điểm nếu title hoặc address chứa từ khóa tìm kiếm
+            if (room.title.toLowerCase().contains(word)) {
+              titleScore += 0.2;
+            }
+            if (room.address.toLowerCase().contains(word)) {
+              addressScore += 0.2;
+            }
+          }
+
+          // Lấy điểm cao nhất giữa title và address
+          double maxScore =
+              titleScore > addressScore ? titleScore : addressScore;
+
+          // Thêm vào kết quả nếu điểm đủ cao
+          return maxScore > 0.3; // Có thể điều chỉnh ngưỡng này
+        }).map((room) {
+          // Tính điểm tổng hợp cho mỗi phòng
+          double titleScore = _calculateSimilarity(room.title, searchTerm);
+          double addressScore = _calculateSimilarity(room.address, searchTerm);
+
+          for (final word
+              in searchTerm.split(' ').where((word) => word.isNotEmpty)) {
+            if (room.title.toLowerCase().contains(word)) titleScore += 0.2;
+            if (room.address.toLowerCase().contains(word)) addressScore += 0.2;
+          }
+
+          return MapEntry(
+              room, titleScore > addressScore ? titleScore : addressScore);
+        }).toList();
+
+        // Sắp xếp kết quả theo điểm số từ cao xuống thấp
+        scoredResults.sort((a, b) => b.value.compareTo(a.value));
+
+        // Lấy danh sách phòng đã sắp xếp
+        _searchResults = scoredResults.map((entry) => entry.key).toList();
+      });
+    });
+  }
+
+  // Sửa lại widget hiển thị kết quả tìm kiếm
+  Widget _buildSearchResults() {
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: _searchResults.length > 5 ? 5 : _searchResults.length,
+              itemBuilder: (context, index) {
+                final room = _searchResults[index];
+                return ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      image: room.images.isNotEmpty
+                          ? DecorationImage(
+                              image: NetworkImage(room.images.first),
+                              fit: BoxFit.cover,
+                            )
+                          : null,
+                    ),
+                    child: room.images.isEmpty
+                        ? const Icon(Icons.home, color: Colors.grey)
+                        : null,
+                  ),
+                  title: Text(
+                    room.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  subtitle: Text(
+                    room.address,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  trailing: Text(
+                    '${(room.price / 1000000).toStringAsFixed(1)}tr/tháng',
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onTap: () {
+                    _mapController?.animateCamera(
+                      CameraUpdate.newLatLngZoom(
+                        LatLng(room.latitude, room.longitude),
+                        16,
+                      ),
+                    );
+
+                    FocusScope.of(context).unfocus();
+                    setState(() {
+                      _isSearching = false;
+                      _searchController.clear();
+                    });
+
+                    _showRoomDetails(room);
+                  },
+                );
+              },
+            ),
+            if (_searchResults.length > 5)
+              TextButton(
+                onPressed: () {
+                  //  Hiển thị tất cả kết quả trong một modal bottom sheet
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => DraggableScrollableSheet(
+                      initialChildSize: 0.7,
+                      minChildSize: 0.5,
+                      maxChildSize: 0.9,
+                      builder: (context, scrollController) => Container(
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(20),
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 5,
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2.5),
+                              ),
+                            ),
+                            Expanded(
+                              child: ListView.builder(
+                                controller: scrollController,
+                                itemCount: _searchResults.length,
+                                itemBuilder: (context, index) {
+                                  final room = _searchResults[index];
+                                  return ListTile(
+                                    leading: Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        image: room.images.isNotEmpty
+                                            ? DecorationImage(
+                                                image: NetworkImage(
+                                                    room.images.first),
+                                                fit: BoxFit.cover,
+                                              )
+                                            : null,
+                                      ),
+                                      child: room.images.isEmpty
+                                          ? const Icon(Icons.home,
+                                              color: Colors.grey)
+                                          : null,
+                                    ),
+                                    title: Text(room.title),
+                                    subtitle: Text(room.address),
+                                    trailing: Text(
+                                      '${(room.price / 1000000).toStringAsFixed(1)}tr/tháng',
+                                      style: const TextStyle(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      _mapController?.animateCamera(
+                                        CameraUpdate.newLatLngZoom(
+                                          LatLng(room.latitude, room.longitude),
+                                          16,
+                                        ),
+                                      );
+                                      _showRoomDetails(room);
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  'Xem tất cả ${_searchResults.length} kết quả',
+                  style: const TextStyle(color: AppColors.primary),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Cập nhật widget thanh tìm kiếm
+  Widget _buildSearchBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: _searchController,
+        focusNode: _searchFocusNode,
+        decoration: InputDecoration(
+          hintText: 'Tìm kiếm địa điểm, khu vực...',
+          hintStyle: TextStyle(color: Colors.grey[600]),
+          prefixIcon: const Icon(Icons.search, color: AppColors.primary),
+          suffixIcon: _searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.clear),
+                  onPressed: () {
+                    _searchController.clear();
+                    setState(() {
+                      _isSearching = false;
+                    });
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Thêm hàm tính độ tương đồng giữa hai chuỗi
+  double _calculateSimilarity(String str1, String str2) {
+    str1 = str1.toLowerCase();
+    str2 = str2.toLowerCase();
+
+    if (str1.isEmpty || str2.isEmpty) return 0;
+    if (str1 == str2) return 1;
+
+    // Tính số ký tự giống nhau
+    int matchingChars = 0;
+    for (int i = 0; i < str1.length && i < str2.length; i++) {
+      if (str1[i] == str2[i]) matchingChars++;
+    }
+
+    // Kiểm tra nếu một chuỗi chứa chuỗi còn lại
+    if (str1.contains(str2) || str2.contains(str1)) {
+      return 0.8;
+    }
+
+    // Tính độ tương đồng dựa trên số ký tự giống nhau
+    return matchingChars / (str1.length + str2.length) * 2;
+  }
+
+  // Thêm phương thức để tính độ zoom dựa trên bán kính
+  double _getZoomLevel(double radius) {
+    double zoomLevel = 11;
+    if (radius <= 500) {
+      zoomLevel = 15;
+    } else if (radius <= 1000) {
+      zoomLevel = 14.5;
+    } else if (radius <= 2000) {
+      zoomLevel = 14;
+    } else if (radius <= 3000) {
+      zoomLevel = 13.5;
+    } else if (radius <= 4000) {
+      zoomLevel = 13;
+    } else if (radius <= 5000) {
+      zoomLevel = 12.5;
+    } else {
+      zoomLevel = 12;
+    }
+    return zoomLevel;
   }
 }

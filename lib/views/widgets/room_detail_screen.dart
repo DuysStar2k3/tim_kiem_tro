@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
-import '../../../../controllers/auth_controller.dart';
-import '../../../../controllers/room_controller.dart';
-import '../../../../models/room_model.dart';
-import '../../../../theme/app_colors.dart';
-import 'room_location_detail_screen.dart';
-import '../../../../models/comment_model.dart';
+import '../../controllers/auth_controller.dart';
+import '../../controllers/room_controller.dart';
+import '../../models/room_model.dart';
+import '../../theme/app_colors.dart';
+import '../../utils/currency_format.dart';
+import '../screens/user/landlord/room/room_location_detail_screen.dart';
+import '../../models/comment_model.dart';
 
 class RoomDetailScreen extends StatefulWidget {
   final RoomModel room;
@@ -248,7 +249,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
               child: _buildInfoCard(
                 icon: Icons.attach_money,
                 title: 'Giá thuê',
-                value: '${widget.room.price.toStringAsFixed(0)} VNĐ/tháng',
+                value:
+                    '${CurrencyFormat.formatVNDCurrency(widget.room.price)}/tháng',
               ),
             ),
             const SizedBox(width: 16),
@@ -268,7 +270,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
               child: _buildInfoCard(
                 icon: Icons.account_balance_wallet,
                 title: 'Đặt cọc',
-                value: '${widget.room.deposit.toStringAsFixed(0)} VNĐ',
+                value: CurrencyFormat.formatVNDCurrency(widget.room.deposit),
               ),
             ),
             const SizedBox(width: 16),
@@ -474,9 +476,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
               children: List.generate(5, (index) {
                 return Icon(
                   Icons.star,
-                  color: index < _userRating 
-                      ? Colors.amber 
-                      : Colors.grey[300],
+                  color: index < _userRating ? Colors.amber : Colors.grey[300],
                   size: 24,
                 );
               }),
@@ -523,10 +523,10 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
     try {
       await context.read<RoomController>().rateRoom(
-        widget.room.id,
-        userId,
-        _userRating,
-      );
+            widget.room.id,
+            userId,
+            _userRating,
+          );
 
       if (!mounted) return;
 
@@ -624,7 +624,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
 
         // Stream bình luận
         StreamBuilder<List<CommentModel>>(
-          stream: context.read<RoomController>().getRoomComments(widget.room.id),
+          stream:
+              context.read<RoomController>().getRoomComments(widget.room.id),
           builder: (context, snapshot) {
             if (snapshot.hasError) {
               return Center(
@@ -640,18 +641,15 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             }
 
             final comments = snapshot.data!;
-            final parentComments = comments
-                .where((c) => c.parentId == null)
-                .toList();
+            final parentComments =
+                comments.where((c) => c.parentId == null).toList();
 
             if (comments.isEmpty) {
               return Center(
                 child: Column(
                   children: [
-                    Icon(Icons.chat_bubble_outline, 
-                      size: 48, 
-                      color: Colors.grey[400]
-                    ),
+                    Icon(Icons.chat_bubble_outline,
+                        size: 48, color: Colors.grey[400]),
                     const SizedBox(height: 8),
                     Text(
                       'Chưa có bình luận nào',
@@ -663,8 +661,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             }
 
             // Lọc số lượng bình luận hiển thị
-            final displayedComments = _showAllComments 
-                ? parentComments 
+            final displayedComments = _showAllComments
+                ? parentComments
                 : parentComments.take(_initialCommentCount).toList();
 
             return Column(
@@ -673,19 +671,23 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: displayedComments.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 16),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
                   itemBuilder: (context, index) {
                     return _buildCommentItem(
                       displayedComments[index],
-                      comments.where((c) => 
-                        c.parentId == displayedComments[index].id).toList(),
+                      comments
+                          .where(
+                              (c) => c.parentId == displayedComments[index].id)
+                          .toList(),
                       currentUser?.id,
                     );
                   },
                 ),
 
                 // Nút xem thêm
-                if (parentComments.length > _initialCommentCount && !_showAllComments)
+                if (parentComments.length > _initialCommentCount &&
+                    !_showAllComments)
                   Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: TextButton(
@@ -709,9 +711,8 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                             style: TextStyle(color: Colors.grey[800]),
                           ),
                           const SizedBox(width: 4),
-                          Icon(Icons.keyboard_arrow_down, 
-                            color: Colors.grey[800]
-                          ),
+                          Icon(Icons.keyboard_arrow_down,
+                              color: Colors.grey[800]),
                         ],
                       ),
                     ),
@@ -837,8 +838,9 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                 ),
               ),
               child: Column(
-                children: replies.map((reply) => 
-                  _buildReplyItem(reply, currentUserId)).toList(),
+                children: replies
+                    .map((reply) => _buildReplyItem(reply, currentUserId))
+                    .toList(),
               ),
             ),
         ],
@@ -961,7 +963,9 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             child: TextField(
               controller: _commentController,
               decoration: InputDecoration(
-                hintText: parentId != null ? 'Trả lời bình luận...' : 'Viết bình luận...',
+                hintText: parentId != null
+                    ? 'Trả lời bình luận...'
+                    : 'Viết bình luận...',
                 border: InputBorder.none,
               ),
               maxLines: null,
@@ -973,11 +977,11 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
             onPressed: () {
               if (_commentController.text.trim().isNotEmpty) {
                 context.read<RoomController>().addRoomComment(
-                  widget.room.id,
-                  userId,
-                  _commentController.text.trim(),
-                  parentId: parentId,
-                );
+                      widget.room.id,
+                      userId,
+                      _commentController.text.trim(),
+                      parentId: parentId,
+                    );
                 _commentController.clear();
               }
             },
@@ -1186,7 +1190,7 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                
+
                 // Tiêu đề
                 const Padding(
                   padding: EdgeInsets.all(16),
@@ -1223,10 +1227,10 @@ class _RoomDetailScreenState extends State<RoomDetailScreen> {
                       onPressed: () {
                         if (_commentController.text.trim().isNotEmpty) {
                           context.read<RoomController>().addRoomComment(
-                            widget.room.id,
-                            userId,
-                            _commentController.text.trim(),
-                          );
+                                widget.room.id,
+                                userId,
+                                _commentController.text.trim(),
+                              );
                           _commentController.clear();
                           Navigator.pop(context);
                         }

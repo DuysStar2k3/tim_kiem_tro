@@ -4,7 +4,7 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/room_controller.dart';
 import '../../../../models/activity_model.dart';
 import '../../../../theme/app_colors.dart';
-import '../room/room_detail_screen.dart';
+import '../../../widgets/room_detail_screen.dart';
 import '../../auth/login_screen.dart';
 
 class ActivityScreen extends StatelessWidget {

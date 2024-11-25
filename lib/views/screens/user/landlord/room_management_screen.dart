@@ -4,7 +4,8 @@ import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/room_controller.dart';
 import '../../../../models/room_model.dart';
 import '../../../../theme/app_colors.dart';
-import 'create_room_screen.dart';
+import '../../../../utils/currency_format.dart';
+import 'room/create_room_screen.dart';
 
 class RoomManagementScreen extends StatefulWidget {
   const RoomManagementScreen({super.key});
@@ -15,7 +16,6 @@ class RoomManagementScreen extends StatefulWidget {
 
 class _RoomManagementScreenState extends State<RoomManagementScreen> {
   String? currentUserId;
-
   @override
   void initState() {
     super.initState();
@@ -30,13 +30,15 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
       } else {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Vui lòng đăng nhập để xem danh sách phòng')),
+            const SnackBar(
+                content: Text('Vui lòng đăng nhập để xem danh sách phòng')),
           );
           Navigator.pop(context);
         }
       }
     });
   }
+
 
   // Thêm phương thức tải danh sách phòng
   Future<void> _loadRooms() async {
@@ -45,7 +47,7 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
     }
     try {
       final roomController = context.read<RoomController>();
-      await roomController.getRoomsByLandlord(currentUserId!);
+      roomController.getRoomsByLandlord(currentUserId!);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -104,11 +106,11 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
               ),
             ),
           ],
-          bottom: TabBar(
+          bottom: const TabBar(
             labelColor: AppColors.primary,
             unselectedLabelColor: Colors.grey,
             indicatorColor: AppColors.primary,
-            tabs: const [
+            tabs: [
               Tab(text: 'Tất cả'),
               Tab(text: 'Chờ duyệt'),
               Tab(text: 'Đã duyệt'),
@@ -311,8 +313,8 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
-                              '${room.price.toStringAsFixed(0)} VNĐ/tháng',
-                              style: TextStyle(
+                              '${CurrencyFormat.formatVNDCurrency(room.price)}/tháng',
+                              style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -426,12 +428,12 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
 
                     // Thông tin cơ bản
                     _buildInfoRow(Icons.location_on, 'Địa chỉ:', room.address),
-                    _buildInfoRow(Icons.attach_money, 'Giá thuê:', 
-                      '${room.price.toStringAsFixed(0)} VNĐ/tháng'),
-                    _buildInfoRow(Icons.square_foot, 'Diện tích:', 
-                      '${room.area} m²'),
-                    _buildInfoRow(Icons.people, 'Số người ở tối đa:', 
-                      '${room.maxTenants} người'),
+                    _buildInfoRow(Icons.attach_money, 'Giá thuê:',
+                        '${CurrencyFormat.formatVNDCurrency(room.price)}/tháng'),
+                    _buildInfoRow(
+                        Icons.square_foot, 'Diện tích:', '${room.area} m²'),
+                    _buildInfoRow(Icons.people, 'Số người ở tối đa:',
+                        '${room.maxTenants} người'),
                     _buildInfoRow(Icons.person, 'Giới tính:', room.gender),
 
                     const SizedBox(height: 16),
@@ -446,12 +448,12 @@ class _RoomManagementScreenState extends State<RoomManagementScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
                         children: [
-                          _buildStatItem(Icons.remove_red_eye, 
-                            '${room.views}', 'Lượt xem'),
-                          _buildStatItem(Icons.favorite, 
-                            '${room.favoriteBy.length}', 'Lượt thích'),
-                          _buildStatItem(Icons.star, 
-                            room.rating.toStringAsFixed(1), 'Đánh giá'),
+                          _buildStatItem(Icons.remove_red_eye, '${room.views}',
+                              'Lượt xem'),
+                          _buildStatItem(Icons.favorite,
+                              '${room.favoriteBy.length}', 'Lượt thích'),
+                          _buildStatItem(Icons.star,
+                              room.rating.toStringAsFixed(1), 'Đánh giá'),
                         ],
                       ),
                     ),

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher_string.dart';
-import '../../../../models/room_model.dart';
-import '../../../../theme/app_colors.dart';
+import '../../../../../models/room_model.dart';
+import '../../../../../theme/app_colors.dart';
+import '../../../../../utils/currency_format.dart';
 
 class RoomLocationDetailScreen extends StatefulWidget {
   final RoomModel room;
@@ -21,19 +22,32 @@ class RoomLocationDetailScreen extends StatefulWidget {
 class _RoomLocationDetailScreenState extends State<RoomLocationDetailScreen> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
-
+  BitmapDescriptor? _roomMarkerIcon;
   @override
   void initState() {
     super.initState();
-    _markers.add(
-      Marker(
-        markerId: MarkerId(widget.room.id),
-        position: LatLng(widget.room.latitude, widget.room.longitude),
-        infoWindow: InfoWindow(
-          title: widget.room.title,
-          snippet: '${widget.room.price.toStringAsFixed(0)} VNĐ/tháng',
-        ),
-      ),
+    _createMarkerIcon().then((_) {
+      setState(() {
+        _markers.add(
+          Marker(
+            markerId: MarkerId(widget.room.id),
+            position: LatLng(widget.room.latitude, widget.room.longitude),
+            icon: _roomMarkerIcon ?? BitmapDescriptor.defaultMarker,
+            infoWindow: InfoWindow(
+              title: widget.room.title,
+              snippet: '${widget.room.price.toStringAsFixed(0)} VNĐ/tháng',
+            ),
+          ),
+        );
+      });
+    });
+  }
+
+  Future<void> _createMarkerIcon() async {
+    // ignore: deprecated_member_use
+    _roomMarkerIcon = await BitmapDescriptor.asset(
+      const ImageConfiguration(size: Size(30, 30)),
+      'assets/icons/hostel.png',
     );
   }
 
@@ -112,7 +126,7 @@ class _RoomLocationDetailScreenState extends State<RoomLocationDetailScreen> {
                           size: 16, color: Colors.grey),
                       const SizedBox(width: 4),
                       Text(
-                        '${widget.room.price.toStringAsFixed(0)} VNĐ/tháng',
+                        '${CurrencyFormat.formatVNDCurrency(widget.room.price)}/tháng',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
@@ -126,7 +140,7 @@ class _RoomLocationDetailScreenState extends State<RoomLocationDetailScreen> {
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () {
-                            // TODO: Open in Google Maps
+                            //  Open in Google Maps
                             _openInGoogleMaps();
                           },
                           icon: const Icon(Icons.map),
@@ -137,7 +151,7 @@ class _RoomLocationDetailScreenState extends State<RoomLocationDetailScreen> {
                       Expanded(
                         child: ElevatedButton.icon(
                           onPressed: () {
-                            // TODO: Get directions
+                            //  Get directions
                             _getDirections();
                           },
                           icon: const Icon(Icons.directions),

@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/room_model.dart';
 import '../../theme/app_colors.dart';
-import '../screens/user/room/room_detail_screen.dart';
+import '../../utils/currency_format.dart';
+import 'room_detail_screen.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/room_controller.dart';
 
@@ -197,7 +198,7 @@ class RoomCard extends StatelessWidget {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              '${room.price.toStringAsFixed(0)} VNĐ/tháng',
+                              '${CurrencyFormat.formatVNDCurrency(room.price)}/tháng',
                               style: const TextStyle(
                                 color: AppColors.primary,
                                 fontWeight: FontWeight.bold,
@@ -297,7 +298,7 @@ class RoomCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.primary,
               fontSize: 12,
               fontWeight: FontWeight.w500,

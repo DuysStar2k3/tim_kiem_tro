@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../controllers/room_controller.dart';
 import '../../../../theme/app_colors.dart';
+import '../../../../utils/currency_format.dart';
 import '../../../widgets/room_list_view.dart';
-import '../room/room_detail_screen.dart';
+import '../../../widgets/room_detail_screen.dart';
 import '../search/search_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -148,9 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
               // Phòng trọ nổi bật
               _buildFeaturedRooms(),
 
-              // Khu vực phổ biến
-              // _buildPopularAreas(),
-
               // Phòng trọ mới nhất
               _buildRecentRooms(),
 
@@ -289,37 +287,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildRecentRooms() {
-    return Column(
+    return const Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
+          padding: EdgeInsets.fromLTRB(16, 24, 16, 16),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Phòng trọ mới nhất',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  // TODO: Xử lý xem tất cả phòng
-                },
-                child: const Text(
-                  'Xem tất cả',
-                  style: TextStyle(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
-        const RoomListView(),
+        RoomListView(),
       ],
     );
   }
@@ -493,7 +479,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${room.price.toStringAsFixed(0)} VNĐ/tháng',
+                                    '${CurrencyFormat.formatVNDCurrency(room.price)}/tháng',
                                     style: const TextStyle(
                                       color: AppColors.primary,
                                       fontWeight: FontWeight.bold,
