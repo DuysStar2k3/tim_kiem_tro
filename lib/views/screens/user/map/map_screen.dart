@@ -719,8 +719,8 @@ class _MapScreenState extends State<MapScreen>
                   icon: !_showRadius
                       ? (_sheetController.isAttached &&
                               _sheetController.size <= _collapsedSheetSize + 0.1
-                          ? Icons.keyboard_arrow_down
-                          : Icons.keyboard_arrow_up)
+                          ? Icons.keyboard_arrow_up
+                          : Icons.keyboard_arrow_down)
                       : (_isExpanded
                           ? Icons.keyboard_arrow_down
                           : Icons.keyboard_arrow_up),
@@ -728,8 +728,8 @@ class _MapScreenState extends State<MapScreen>
                   label: !_showRadius
                       ? (_sheetController.isAttached &&
                               _sheetController.size <= _collapsedSheetSize + 0.1
-                          ? 'Thu gọn'
-                          : 'Mở rộng')
+                          ? 'Mở rộng'
+                          : 'Thu gọn')
                       : (_isExpanded ? 'Thu gọn' : 'Mở rộng'),
                 ),
               ],

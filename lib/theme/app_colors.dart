@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Màu chủ đạo
-  static const Color primary = Color(0xFF2196F3); // Hoặc màu chính của bạn
+  static const Color primary = Color(0xFFE61E4D); // Hoặc màu chính của bạn
 
   // Thêm phương thức tạo MaterialColor từ Color
   static MaterialColor createMaterialColor(Color color) {
@@ -81,4 +81,4 @@ class AppColors {
   static const Color bottomNavBackground = Colors.white;
   static const Color bottomNavInactive = Color(0xFF717171);
   static const Color bottomNavActive = primary;
-} 
+}

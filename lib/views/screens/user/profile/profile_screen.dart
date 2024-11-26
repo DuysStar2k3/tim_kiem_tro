@@ -2,23 +2,107 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../../controllers/auth_controller.dart';
 import '../../../../theme/app_colors.dart';
+import '../../../widgets/loading_screen.dart';
 import '../../auth/login_screen.dart';
 import '../../../../controllers/room_controller.dart';
+import '../../user_main_screen.dart';
 import '../favorite/favorite_screen.dart';
+import '../landlord/landlord_main_screen.dart';
 import 'edit_profile_screen.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  bool isLoading = false;
+
+  Future<void> _handleRoleChange(
+      BuildContext context, String userId, bool isLandlord) async {
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const LoadingScreen(
+        message: 'Đang chuyển đổi chế độ...',
+      ),
+    );
+
+    try {
+      await Future.delayed(const Duration(seconds: 1));
+
+      if (!mounted) return;
+
+      // ignore: use_build_context_synchronously
+      final authController = context.read<AuthController>();
+      await authController.setLandlordRole(
+        userId: userId,
+        isLandlord: isLandlord,
+        // ignore: use_build_context_synchronously
+        context: context,
+      );
+
+      if (!mounted) return;
+
+      // Đóng dialog loading
+      Navigator.pop(context);
+
+      // Hiển thị thông báo thành công
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isLandlord
+              ? 'Đã chuyển sang chế độ chủ trọ'
+              : 'Đã chuyển về chế độ người thuê'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      if (!mounted) return;
+
+      // Điều hướng dựa trên role mới
+      if (isLandlord) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LandlordMainScreen()),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        // Đóng dialog loading nếu có lỗi
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Có lỗi xảy ra: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Consumer<AuthController>(
-      builder: (context, auth, _) {
-        if (!auth.isLoggedIn) {
-          return _buildLoginPrompt(context);
-        }
-        return _buildUserProfile(context, auth);
-      },
+    return Stack(
+      children: [
+        Consumer<AuthController>(
+          builder: (context, auth, _) {
+            if (!auth.isLoggedIn) {
+              return _buildLoginPrompt(context);
+            }
+            return _buildUserProfile(context, auth);
+          },
+        ),
+      ],
     );
   }
 
@@ -117,7 +201,8 @@ class ProfileScreen extends StatelessWidget {
                     Positioned.fill(
                       child: GridView.builder(
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 8,
                           mainAxisSpacing: 15,
                           crossAxisSpacing: 15,
@@ -171,7 +256,7 @@ class ProfileScreen extends StatelessWidget {
                                 ? Center(
                                     child: Text(
                                       user.fullName?[0].toUpperCase() ?? 'U',
-                                      style: TextStyle(
+                                      style: const TextStyle(
                                         color: AppColors.primary,
                                         fontSize: 32,
                                         fontWeight: FontWeight.bold,
@@ -307,29 +392,19 @@ class ProfileScreen extends StatelessWidget {
                         _buildDivider(),
                         _buildMenuItem(
                           icon: Icons.home_work,
-                          title: 'Trở thành chủ trọ',
-                          subtitle: 'Đăng và quản lý phòng cho thuê',
-                          onTap: () {
-                            context.read<AuthController>().setLandlordRole(
-                                  userId: user.id,
-                                  isLandlord: true,
-                                  context: context,
-                                );
-                          },
+                          title: 'Sang chế độ đón khách',
+                          subtitle: 'Đăng và quản lý bài đăng',
+                          onTap: () =>
+                              _handleRoleChange(context, user.id, true),
                         ),
                       ] else ...[
                         _buildDivider(),
                         _buildMenuItem(
                           icon: Icons.person,
-                          title: 'Trở về người dùng',
+                          title: 'Trở về',
                           subtitle: 'Quay lại giao diện người thuê',
-                          onTap: () {
-                            context.read<AuthController>().setLandlordRole(
-                                  userId: user.id,
-                                  isLandlord: false,
-                                  context: context,
-                                );
-                          },
+                          onTap: () =>
+                              _handleRoleChange(context, user.id, false),
                         ),
                       ],
                       _buildDivider(),

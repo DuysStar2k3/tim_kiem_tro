@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../models/user_model.dart';
 import '../views/screens/admin/admin_main_screen.dart';
-import '../views/screens/user/landlord/landlord_main_screen.dart';
 import '../views/screens/user_main_screen.dart';
 
 class AuthController extends ChangeNotifier {
@@ -27,12 +26,21 @@ class AuthController extends ChangeNotifier {
   }
 
   void _initializeAuth() {
+    _isLoading = true;
+    notifyListeners();
+    
     _auth.authStateChanges().listen((User? user) async {
+      _isLoading = true;
+      notifyListeners();
+      
       if (user == null) {
         _currentUser = null;
+        _isLoading = false;
         notifyListeners();
       } else {
         await _loadUserData(user.uid);
+        _isLoading = false;
+        notifyListeners();
       }
     });
   }
@@ -209,34 +217,19 @@ class AuthController extends ChangeNotifier {
     required BuildContext context,
   }) async {
     try {
+      // Cập nhật role trong Firestore
       await _firestore.collection('users').doc(userId).update({
         'isLandlord': isLandlord,
       });
 
-      if (_currentUser != null) {
-        _currentUser = UserModel(
-          id: _currentUser!.id,
-          email: _currentUser!.email,
-          fullName: _currentUser!.fullName,
-          isAdmin: _currentUser!.isAdmin,
-          isLandlord: isLandlord,
-          createdAt: _currentUser!.createdAt,
-        );
-        notifyListeners();
-      }
+      // Cập nhật currentUser trong state
+      _currentUser = _currentUser?.copyWith(isLandlord: isLandlord);
 
-      if (context.mounted) {
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                isLandlord ? const LandlordMainScreen() : const MainScreen(),
-          ),
-          (route) => false,
-        );
-      }
+      // Thông báo thay đổi để UI cập nhật
+      notifyListeners();
     } catch (e) {
-      debugPrint('Lỗi khi cập nhật vai trò: $e');
+      debugPrint('Lỗi khi thiết lập vai trò chủ trọ: $e');
+      rethrow;
     }
   }
 

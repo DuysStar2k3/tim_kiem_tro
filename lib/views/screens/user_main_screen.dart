@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/room_controller.dart';
-import 'admin/admin_main_screen.dart';
 import 'user/home/home_screen.dart';
-import 'user/landlord/landlord_main_screen.dart';
 import 'user/favorite/favorite_screen.dart';
 import 'user/map/map_screen.dart';
 import 'user/activity/activity_screen.dart';
@@ -30,25 +28,17 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthController>(
-      builder: (context, auth, child) {
-        if (auth.isLoggedIn) {
-          if (auth.isAdmin) {
-            return const AdminMainScreen();
-          } else if (auth.isLandlord) {
-            return const LandlordMainScreen();
-          }
-        }
-
-        return Scaffold(
-          body: _screens[_selectedIndex],
-          bottomNavigationBar: Container(
-            decoration: BoxDecoration(
-              border: Border(
-                top: BorderSide(color: Colors.grey[300]!, width: 1),
-              ),
-            ),
-            child: StreamBuilder<int>(
+    return Scaffold(
+      body: _screens[_selectedIndex],
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: Colors.grey[300]!, width: 1),
+          ),
+        ),
+        child: Consumer<AuthController>(
+          builder: (context, auth, child) {
+            return StreamBuilder<int>(
               stream: auth.isLoggedIn
                   ? context
                       .read<RoomController>()
@@ -190,10 +180,10 @@ class _MainScreenState extends State<MainScreen> {
                   ],
                 );
               },
-            ),
-          ),
-        );
-      },
+            );
+          },
+        ),
+      ),
     );
   }
 }
