@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'pages/admin_home_page.dart';
 import 'pages/pending_posts_page.dart';
 import 'pages/statistics_page.dart';
-import 'pages/featured_rooms_page.dart';
 
 class AdminMainScreen extends StatefulWidget {
   const AdminMainScreen({super.key});
@@ -18,7 +17,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
     AdminHomePage(),
     PendingPostsPage(),
     StatisticsPage(),
-    FeaturedRoomsPage(),
   ];
 
   @override
@@ -47,11 +45,6 @@ class _AdminMainScreenState extends State<AdminMainScreen> {
             icon: Icon(Icons.bar_chart_outlined),
             selectedIcon: Icon(Icons.bar_chart),
             label: 'Thống kê',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.star_outline),
-            selectedIcon: Icon(Icons.star),
-            label: 'Đề cử',
           ),
         ],
       ),

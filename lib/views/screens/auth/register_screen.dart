@@ -31,11 +31,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Nút back
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
+                  SizedBox(
+                    height: MediaQuery.of(context).size.height * 0.1,
+                  ),
+                  Center(
+                    child: Hero(
+                      tag: 'app_logo',
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(25),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.primary.withOpacity(0.2),
+                              blurRadius: 15,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: const Icon(
+                          Icons.home_rounded,
+                          size: 50,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Text(

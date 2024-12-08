@@ -374,6 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 200,
                       margin: const EdgeInsets.only(right: 16),
                       child: Card(
+                        color: AppColors.border,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),

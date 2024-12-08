@@ -62,12 +62,6 @@ class AdminHomePage extends StatelessWidget {
       ),
       actions: [
         IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () {
-            // TODO: Implement notifications
-          },
-        ),
-        IconButton(
           icon: const Icon(Icons.logout),
           onPressed: () {
             context.read<AuthController>().logout(context: context);

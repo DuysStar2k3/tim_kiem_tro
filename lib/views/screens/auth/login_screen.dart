@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:tro_moi/views/screens/auth/register_screen.dart';
 import '../../../controllers/auth_controller.dart';
+import '../../../splash/splash_page.dart';
 import '../../../theme/app_colors.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -30,6 +31,16 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios),
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SplashPage(),
+                      ),
+                    ),
+                    padding: EdgeInsets.zero,
+                  ),
                   const SizedBox(height: 40),
                   // Logo và tiêu đề
                   Center(
@@ -237,4 +248,4 @@ class _LoginScreenState extends State<LoginScreen> {
     _passwordController.dispose();
     super.dispose();
   }
-} 
+}
