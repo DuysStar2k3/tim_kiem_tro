@@ -21,9 +21,6 @@ class RoomCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = context.read<AuthController>().currentUser;
-    final isFavorite =
-        currentUser != null && room.favoriteBy.contains(currentUser.id);
 
     return Card(
       clipBehavior: Clip.antiAlias,
@@ -81,30 +78,6 @@ class RoomCard extends StatelessWidget {
                           ),
                         ),
                 ),
-
-                // Badge yêu thích
-                if (currentUser != null)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Material(
-                      color: Colors.white,
-                      elevation: 2,
-                      borderRadius: BorderRadius.circular(20),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(20),
-                        onTap: () => onFavoriteChanged?.call(room),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Icon(
-                            isFavorite ? Icons.favorite : Icons.favorite_border,
-                            color: isFavorite ? Colors.red : Colors.grey[400],
-                            size: 20,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
 
                 // Badge lượt xem
                 Positioned(

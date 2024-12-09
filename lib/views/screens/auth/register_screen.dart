@@ -212,6 +212,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             : const Text(
                                 'Đăng ký',
                                 style: TextStyle(
+                                  color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),

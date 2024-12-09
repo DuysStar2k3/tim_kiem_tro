@@ -33,11 +33,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios),
-                    onPressed: () => Navigator.push(
+                    onPressed: () => Navigator.pushAndRemoveUntil(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const SplashPage(),
                       ),
+                      (route) => false,
                     ),
                     padding: EdgeInsets.zero,
                   ),
@@ -199,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             : const Text(
                                 'Đăng nhập',
                                 style: TextStyle(
+                                  color: Colors.white,
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -216,11 +218,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       TextButton(
                         onPressed: () {
-                          Navigator.push(
+                          Navigator.pushAndRemoveUntil(
                             context,
                             MaterialPageRoute(
                               builder: (context) => const RegisterScreen(),
                             ),
+                            (route) => false,
                           );
                         },
                         child: const Text(

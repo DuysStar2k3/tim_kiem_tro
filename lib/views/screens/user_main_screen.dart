@@ -48,6 +48,7 @@ class _MainScreenState extends State<MainScreen> {
                 final unreadCount = snapshot.data ?? 0;
 
                 return BottomNavigationBar(
+                  iconSize: 28,
                   type: BottomNavigationBarType.fixed,
                   backgroundColor: Colors.white,
                   selectedItemColor: Colors.red,

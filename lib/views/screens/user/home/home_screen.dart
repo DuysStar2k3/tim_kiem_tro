@@ -374,7 +374,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       width: 200,
                       margin: const EdgeInsets.only(right: 16),
                       child: Card(
-                        color: AppColors.border,
+                        color: AppColors.cardPurple,
                         clipBehavior: Clip.antiAlias,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -500,7 +500,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                           room.address,
                                           style: TextStyle(
                                             color: Colors.grey[600],
-                                            fontSize: 12,
+                                            fontSize: 14,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,

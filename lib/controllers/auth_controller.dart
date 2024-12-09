@@ -69,18 +69,6 @@ class AuthController extends ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-
-      // Kiểm tra email đã tồn tại
-      final methods = await _auth.fetchSignInMethodsForEmail(email);
-      if (methods.isNotEmpty) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Email đã được sử dụng')),
-          );
-        }
-        return;
-      }
-
       // Tạo tài khoản Firebase Auth
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
@@ -119,7 +107,7 @@ class AuthController extends ChangeNotifier {
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Lỗi: $e')),
+          const SnackBar(content: Text('Tài khoản đã tồn tại')),
         );
       }
     } finally {

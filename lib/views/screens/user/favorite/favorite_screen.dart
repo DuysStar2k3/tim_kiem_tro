@@ -72,7 +72,10 @@ class FavoriteScreen extends StatelessWidget {
                 ),
                 child: const Text(
                   'Đăng nhập ngay',
-                  style: TextStyle(fontSize: 16),
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],

@@ -37,6 +37,7 @@ class AppColors {
   static const Color background = Colors.white;
   static const Color surface = Color(0xFFF7F7F7);
   static const Color card = Colors.white;
+  static const Color cardPurple = Color(0xFFEDE7F6);
 
   // Màu văn bản
   static const Color textPrimary = Color(0xFF222222);

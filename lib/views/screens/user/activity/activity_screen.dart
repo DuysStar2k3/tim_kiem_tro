@@ -16,9 +16,6 @@ class ActivityScreen extends StatelessWidget {
       builder: (context, auth, _) {
         if (!auth.isLoggedIn) {
           return Scaffold(
-            appBar: AppBar(
-              title: const Text('Hoạt động'),
-            ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -58,7 +55,10 @@ class ActivityScreen extends StatelessWidget {
                     ),
                     child: const Text(
                       'Đăng nhập ngay',
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -267,12 +267,14 @@ class ActivityScreen extends StatelessWidget {
       child: InkWell(
         onTap: () {
           context.read<RoomController>().markActivityAsRead(activity.id);
-          
+
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => RoomDetailScreen(
-                room: context.read<RoomController>().rooms
+                room: context
+                    .read<RoomController>()
+                    .rooms
                     .firstWhere((room) => room.id == activity.roomId),
               ),
             ),
@@ -299,7 +301,6 @@ class ActivityScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -378,7 +379,7 @@ class ActivityScreen extends StatelessWidget {
 
   String _formatTimeAgo(DateTime dateTime) {
     final difference = DateTime.now().difference(dateTime);
-    
+
     if (difference.inDays > 7) {
       return '${dateTime.day}/${dateTime.month}/${dateTime.year}';
     } else if (difference.inDays > 0) {
@@ -391,4 +392,4 @@ class ActivityScreen extends StatelessWidget {
       return 'Vừa xong';
     }
   }
-} 
+}
